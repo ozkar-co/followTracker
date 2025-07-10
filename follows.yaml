@@ -1,0 +1,42 @@
+- estado_actual: seguido_previamente
+  eventos:
+  - fecha: 2025-01-15
+    tipo: seguido
+  - fecha: 2025-01-16
+    tipo: follow_back
+  - fecha: 2025-02-01
+    tipo: dejado_de_seguir
+  fecha_primer_seguimiento: 2025-01-15
+  fecha_ultima_interaccion: 2025-02-01
+  username: '@ejemplo_usuario'
+- estado_actual: mutuo
+  eventos:
+  - fecha: 2025-01-10
+    tipo: seguido
+  - fecha: 2025-01-11
+    tipo: follow_back
+  fecha_primer_seguimiento: 2025-01-10
+  fecha_ultima_interaccion: 2025-01-11
+  username: '@usuario_mutuo'
+- estado_actual: seguido
+  eventos:
+  - fecha: 2025-01-20
+    tipo: seguido
+  fecha_primer_seguimiento: 2025-01-20
+  fecha_ultima_interaccion: 2025-01-20
+  username: '@usuario_seguido'
+- estado_actual: te_sigue
+  eventos:
+  - fecha: 2025-01-25
+    tipo: follow_back
+  fecha_ultima_interaccion: 2025-01-25
+  username: '@usuario_te_sigue'
+- estado_actual: seguido_previamente
+  eventos:
+  - fecha: '2025-07-10'
+    tipo: seguido
+  - fecha: '2025-07-10'
+    tipo: dejado_de_seguir
+  fecha_primer_seguimiento: '2025-07-10'
+  fecha_ultima_interaccion: '2025-07-10'
+  username: '@ozkar-co'
