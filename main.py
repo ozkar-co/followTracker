@@ -236,7 +236,7 @@ class FollowTracker:
         """Obtener descripción del estado"""
         descriptions = {
             'seguido': 'Lo sigues pero él/ella no te sigue',
-            'mutuo': 'Se siguen mutuamente',
+            'mutuo': 'Se siguen mutuamente (follow back)',
             'no_seguido': 'No lo sigues',
             'te_sigue': 'Él/ella te sigue pero tú no lo sigues',
             'seguido_previamente': 'Lo seguiste en el pasado pero ya no lo sigues'
@@ -263,16 +263,15 @@ class FollowTracker:
                                state='normal' if seguir_enabled else 'disabled')
         btn_seguir.pack(side=tk.LEFT, padx=(0, 10))
         
-        # Botón Follow Back - habilitado solo si no te ha dado follow back
-        follow_back_enabled = estado_actual not in ['mutuo', 'te_sigue']
+        # Botón Follow Back - habilitado solo si lo sigues pero él/ella no te sigue
+        follow_back_enabled = estado_actual == 'seguido'
         btn_follow_back = ttk.Button(self.actions_frame, text="Follow Back", 
                                     command=lambda: self.add_event(username, "follow_back"),
                                     state='normal' if follow_back_enabled else 'disabled')
         btn_follow_back.pack(side=tk.LEFT, padx=(0, 10))
         
-        # Botón Dejar de Seguir - habilitado si lo sigues actualmente O si está en estado te_sigue (follow_back)
-        # En estado te_sigue, técnicamente no lo sigues pero puedes "dejar de seguir" para marcar que ya no quieres seguirlo
-        dejar_seguir_enabled = estado_actual in ['seguido', 'mutuo', 'te_sigue']
+        # Botón Dejar de Seguir - habilitado si lo sigues actualmente (seguido o mutuo)
+        dejar_seguir_enabled = estado_actual in ['seguido', 'mutuo']
         btn_dejar_seguir = ttk.Button(self.actions_frame, text="Dejar de Seguir", 
                                      command=lambda: self.add_event(username, "dejado_de_seguir"),
                                      state='normal' if dejar_seguir_enabled else 'disabled')
@@ -355,9 +354,19 @@ class FollowTracker:
             
             user['estado_actual'] = 'seguido'
         elif ultimo_evento == "follow_back":
-            user['estado_actual'] = 'te_sigue'
+            # Follow back significa que ambos se siguen mutuamente
+            user['estado_actual'] = 'mutuo'
         elif ultimo_evento == "dejado_de_seguir":
-            user['estado_actual'] = 'seguido_previamente'
+            # Si el último evento es "dejado_de_seguir", verificar el contexto
+            # Si venía de un estado mutuo, ahora él te sigue pero tú no lo sigues
+            if len(eventos) >= 2:
+                evento_anterior = eventos[-2]['tipo']
+                if evento_anterior == "follow_back":
+                    user['estado_actual'] = 'te_sigue'
+                else:
+                    user['estado_actual'] = 'seguido_previamente'
+            else:
+                user['estado_actual'] = 'seguido_previamente'
     
     def add_new_user(self, username: str):
         """Agregar un nuevo usuario"""
