@@ -83,3 +83,6 @@ dmypy.json
 # Windows
 Thumbs.db
 desktop.ini
+
+# DB file
+follows.yaml
