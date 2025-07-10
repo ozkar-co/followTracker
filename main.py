@@ -270,8 +270,9 @@ class FollowTracker:
                                     state='normal' if follow_back_enabled else 'disabled')
         btn_follow_back.pack(side=tk.LEFT, padx=(0, 10))
         
-        # Botón Dejar de Seguir - habilitado solo si lo sigues actualmente
-        dejar_seguir_enabled = estado_actual in ['seguido', 'mutuo']
+        # Botón Dejar de Seguir - habilitado si lo sigues actualmente O si está en estado te_sigue (follow_back)
+        # En estado te_sigue, técnicamente no lo sigues pero puedes "dejar de seguir" para marcar que ya no quieres seguirlo
+        dejar_seguir_enabled = estado_actual in ['seguido', 'mutuo', 'te_sigue']
         btn_dejar_seguir = ttk.Button(self.actions_frame, text="Dejar de Seguir", 
                                      command=lambda: self.add_event(username, "dejado_de_seguir"),
                                      state='normal' if dejar_seguir_enabled else 'disabled')
