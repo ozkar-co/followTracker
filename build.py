@@ -42,13 +42,29 @@ class FollowTrackerBuilder:
     
     def create_spec_file(self):
         """Crear archivo .spec para PyInstaller"""
+        # Obtener la ruta del entorno virtual si existe
+        venv_path = ""
+        if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
+            # Estamos en un entorno virtual
+            venv_path = sys.prefix
+        elif 'VIRTUAL_ENV' in os.environ:
+            venv_path = os.environ['VIRTUAL_ENV']
+        
+        # Construir la ruta de site-packages
+        site_packages_path = ""
+        if venv_path:
+            if platform.system() == "Windows":
+                site_packages_path = os.path.join(venv_path, "Lib", "site-packages")
+            else:
+                site_packages_path = os.path.join(venv_path, "lib", "python" + sys.version[:3], "site-packages")
+        
         spec_content = f'''# -*- mode: python ; coding: utf-8 -*-
 
 block_cipher = None
 
 a = Analysis(
     ['{self.main_file}'],
-    pathex=[],
+    pathex={[f'"{site_packages_path}"'] if site_packages_path and os.path.exists(site_packages_path) else []},
     binaries=[],
     datas=[],
     hiddenimports=[
@@ -56,6 +72,19 @@ a = Analysis(
         'tkinter.ttk',
         'tkinter.messagebox',
         'yaml',
+        'yaml.loader',
+        'yaml.dumper',
+        'yaml.cyaml',
+        'yaml.constructor',
+        'yaml.representer',
+        'yaml.resolver',
+        'yaml.emitter',
+        'yaml.serializer',
+        'yaml.parser',
+        'yaml.scanner',
+        'yaml.tokens',
+        'yaml.events',
+        'yaml.nodes',
         'webbrowser',
         'datetime',
         'os',
@@ -105,15 +134,53 @@ exe = EXE(
         """Construir el ejecutable usando PyInstaller"""
         print("Construyendo ejecutable...")
         
-        # Ejecutar PyInstaller
-        result = subprocess.run([
+        # Obtener la ruta del entorno virtual si existe
+        venv_path = ""
+        if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
+            venv_path = sys.prefix
+        elif 'VIRTUAL_ENV' in os.environ:
+            venv_path = os.environ['VIRTUAL_ENV']
+        
+        # Construir la ruta de site-packages
+        site_packages_path = ""
+        if venv_path:
+            if platform.system() == "Windows":
+                site_packages_path = os.path.join(venv_path, "Lib", "site-packages")
+            else:
+                site_packages_path = os.path.join(venv_path, "lib", "python" + sys.version[:3], "site-packages")
+        
+        # Comando base
+        cmd = [
             sys.executable, "-m", "PyInstaller",
             "--clean",
             "--onefile",
             "--windowed",  # Sin consola para GUI
             "--name", self.project_name,
-            self.main_file
-        ], capture_output=True, text=True)
+            "--hidden-import=yaml",
+            "--hidden-import=yaml.loader",
+            "--hidden-import=yaml.dumper",
+            "--hidden-import=yaml.cyaml",
+            "--hidden-import=yaml.constructor",
+            "--hidden-import=yaml.representer",
+            "--hidden-import=yaml.resolver",
+            "--hidden-import=yaml.emitter",
+            "--hidden-import=yaml.serializer",
+            "--hidden-import=yaml.parser",
+            "--hidden-import=yaml.scanner",
+            "--hidden-import=yaml.tokens",
+            "--hidden-import=yaml.events",
+            "--hidden-import=yaml.nodes"
+        ]
+        
+        # Agregar ruta de site-packages si existe
+        if site_packages_path and os.path.exists(site_packages_path):
+            cmd.extend(["--paths", site_packages_path])
+        
+        # Agregar archivo principal
+        cmd.append(self.main_file)
+        
+        # Ejecutar PyInstaller
+        result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode == 0:
             print("✓ Ejecutable construido exitosamente")
@@ -159,8 +226,8 @@ exe = EXE(
             print(f"✗ No se encontró el ejecutable {executable_name}")
             return False
         
-        # Crear directorio de paquete
-        package_dir = f"{self.project_name}_{current_platform}"
+        # Crear directorio de paquete dentro de dist
+        package_dir = os.path.join(self.dist_dir, f"{self.project_name}_{current_platform}")
         if os.path.exists(package_dir):
             shutil.rmtree(package_dir)
         os.makedirs(package_dir)
