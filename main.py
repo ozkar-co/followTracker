@@ -15,7 +15,7 @@ class FollowTracker:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("FollowTracker")
-        self.root.geometry("1200x800")
+        self.root.geometry("1200x900")
         self.root.configure(bg='#f0f0f0')
         
         # Configurar el archivo de datos
@@ -201,9 +201,18 @@ class FollowTracker:
             ttk.Label(self.user_info_frame, text=f"Usuario: {username}", 
                      font=('Arial', 12, 'bold')).grid(row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 10))
             
-            ttk.Label(self.user_info_frame, text=f"Estado actual: {user_data.get('estado_actual', 'N/A')}").grid(row=1, column=0, sticky=tk.W)
-            ttk.Label(self.user_info_frame, text=f"Primer seguimiento: {user_data.get('fecha_primer_seguimiento', 'N/A')}").grid(row=2, column=0, sticky=tk.W)
-            ttk.Label(self.user_info_frame, text=f"Última interacción: {user_data.get('fecha_ultima_interaccion', 'N/A')}").grid(row=3, column=0, sticky=tk.W)
+            # Mostrar detalles del estado
+            estado_actual = user_data.get('estado_actual', 'N/A')
+            estado_descripcion = self.get_estado_description(estado_actual)
+            ttk.Label(self.user_info_frame, text=f"Estado: {estado_actual}", 
+                     font=('Arial', 10, 'bold')).grid(row=1, column=0, sticky=tk.W)
+            ttk.Label(self.user_info_frame, text=f"Descripción: {estado_descripcion}").grid(row=2, column=0, sticky=tk.W)
+            
+            # Mostrar fecha de última interacción
+            ultima_interaccion = user_data.get('fecha_ultima_interaccion', 'N/A')
+            if ultima_interaccion != 'N/A':
+                ultima_interaccion = self.format_date(ultima_interaccion)
+            ttk.Label(self.user_info_frame, text=f"Última interacción: {ultima_interaccion}").grid(row=3, column=0, sticky=tk.W)
             
             # Enlace al perfil
             link_label = ttk.Label(self.user_info_frame, text="Abrir perfil", 
@@ -211,23 +220,66 @@ class FollowTracker:
             link_label.grid(row=4, column=0, sticky=tk.W, pady=(10, 0))
             link_label.bind('<Button-1>', lambda e: self.open_profile(username))
             
-            # Botones de acción
-            ttk.Button(self.actions_frame, text="Seguir", 
-                      command=lambda: self.add_event(username, "seguido")).pack(side=tk.LEFT, padx=(0, 10))
-            ttk.Button(self.actions_frame, text="Follow Back", 
-                      command=lambda: self.add_event(username, "follow_back")).pack(side=tk.LEFT, padx=(0, 10))
-            ttk.Button(self.actions_frame, text="Dejar de Seguir", 
-                      command=lambda: self.add_event(username, "dejado_de_seguir")).pack(side=tk.LEFT, padx=(0, 10))
-            ttk.Button(self.actions_frame, text="Ver Historial", 
-                      command=lambda: self.show_history(username)).pack(side=tk.LEFT, padx=(0, 10))
+            # Botones de acción con lógica de habilitación/deshabilitación
+            self.create_action_buttons(username, user_data)
         else:
             # Usuario no encontrado
             ttk.Label(self.user_info_frame, text=f"Usuario {username} no encontrado", 
                      font=('Arial', 12, 'bold')).grid(row=0, column=0, sticky=tk.W, pady=(0, 10))
+            ttk.Label(self.user_info_frame, text="Este usuario no está en tu base de datos.").grid(row=1, column=0, sticky=tk.W, pady=(0, 10))
             
-            # Botón para agregar nuevo usuario
-            ttk.Button(self.actions_frame, text="Agregar Nuevo Usuario", 
+            # Botón para agregar nuevo usuario (seguir)
+            ttk.Button(self.actions_frame, text="Seguir", 
                       command=lambda: self.add_new_user(username)).pack(side=tk.LEFT)
+    
+    def get_estado_description(self, estado: str) -> str:
+        """Obtener descripción del estado"""
+        descriptions = {
+            'seguido': 'Lo sigues pero él/ella no te sigue',
+            'mutuo': 'Se siguen mutuamente',
+            'no_seguido': 'No lo sigues',
+            'te_sigue': 'Él/ella te sigue pero tú no lo sigues',
+            'seguido_previamente': 'Lo seguiste en el pasado pero ya no lo sigues'
+        }
+        return descriptions.get(estado, 'Estado desconocido')
+    
+    def format_date(self, date_str: str) -> str:
+        """Formatear fecha para mostrar"""
+        try:
+            from datetime import datetime
+            date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+            return date_obj.strftime("%d/%m/%Y")
+        except ValueError:
+            return date_str
+    
+    def create_action_buttons(self, username: str, user_data: Dict):
+        """Crear botones de acción con lógica de habilitación"""
+        estado_actual = user_data.get('estado_actual', 'no_seguido')
+        
+        # Botón Seguir - habilitado solo si no lo sigues actualmente
+        seguir_enabled = estado_actual not in ['seguido', 'mutuo']
+        btn_seguir = ttk.Button(self.actions_frame, text="Seguir", 
+                               command=lambda: self.add_event(username, "seguido"),
+                               state='normal' if seguir_enabled else 'disabled')
+        btn_seguir.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Botón Follow Back - habilitado solo si no te ha dado follow back
+        follow_back_enabled = estado_actual not in ['mutuo', 'te_sigue']
+        btn_follow_back = ttk.Button(self.actions_frame, text="Follow Back", 
+                                    command=lambda: self.add_event(username, "follow_back"),
+                                    state='normal' if follow_back_enabled else 'disabled')
+        btn_follow_back.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Botón Dejar de Seguir - habilitado solo si lo sigues actualmente
+        dejar_seguir_enabled = estado_actual in ['seguido', 'mutuo']
+        btn_dejar_seguir = ttk.Button(self.actions_frame, text="Dejar de Seguir", 
+                                     command=lambda: self.add_event(username, "dejado_de_seguir"),
+                                     state='normal' if dejar_seguir_enabled else 'disabled')
+        btn_dejar_seguir.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Botón Ver Historial - siempre habilitado
+        ttk.Button(self.actions_frame, text="Ver Historial", 
+                  command=lambda: self.show_history(username)).pack(side=tk.LEFT, padx=(0, 10))
     
     def add_event(self, username: str, event_type: str):
         """Agregar un evento para un usuario"""
@@ -273,8 +325,6 @@ class FollowTracker:
         self.refresh_table()
         self.update_statistics()
         self.search_user()  # Actualizar vista
-        
-        messagebox.showinfo("Éxito", f"Evento '{event_type}' registrado para {username}")
     
     def update_user_state(self, user_index: int):
         """Actualizar el estado de un usuario basado en sus eventos"""
